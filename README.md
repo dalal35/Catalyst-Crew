@@ -2,14 +2,14 @@
 
 <br/>
 
-```
+<pre>
  ██████╗ █████╗ ████████╗ █████╗ ██╗  ██╗   ██╗███████╗████████╗
 ██╔════╝██╔══██╗╚══██╔══╝██╔══██╗██║  ╚██╗ ██╔╝██╔════╝╚══██╔══╝
 ██║     ███████║   ██║   ███████║██║   ╚████╔╝ ███████╗   ██║   
 ██║     ██╔══██║   ██║   ██╔══██║██║    ╚██╔╝  ╚════██║   ██║   
 ╚██████╗██║  ██║   ██║   ██║  ██║███████╗██║   ███████║   ██║   
  ╚═════╝╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝   ╚══════╝   ╚═╝   
-```
+</pre>
 
 # Decision Fatigue Detection in Clinical Workflows
 
@@ -95,7 +95,7 @@ main.py
 │             train_kaggle_model()            ← RF + LR, AUC reported
 │
 ├── [Step 2]  load_poe()                      ← MIMIC-IV physician orders
-│             load_emar()                     ← medication administration records  
+│             load_emar()                     ← medication administration records
 │             assign_shifts()                 ← 12-hr windows (07:00/19:00 anchored)
 │             compute_error_signals()         ← D/C + Change + EMAR not-given
 │             engineer_mimic_features()       ← per-shift behavioral features
@@ -196,9 +196,9 @@ Because MIMIC has no ground-truth fatigue labels, we generate pseudo-labels with
 
 ### Why Personal Baseline Matters
 
-Aggregate models that compare all physicians to a population mean conflate:
-- **Inter-provider variance** (some physicians are naturally faster/slower)
-- **Intra-provider fatigue signal** (the same physician degrading over a shift)
+Aggregate models that compare all physicians to a population mean conflate two entirely different things:
+- **Inter-provider variance** — some physicians are naturally faster or slower
+- **Intra-provider fatigue signal** — the same physician degrading over a shift
 
 We model only the second. This is the same methodological insight behind the Israeli parole study — the *change within* a session, not the *level across* sessions, is the fatigue signal.
 
