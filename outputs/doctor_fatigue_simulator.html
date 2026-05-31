@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decision Fatigue Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f7;color:#1a1a1a;min-height:100vh}
+.root{max-width:900px;margin:0 auto;padding:2rem 1rem}
+
+/* login */
+.login-screen{max-width:420px;margin:4rem auto}
+.login-card{background:#fff;border:1px solid #e0e0e0;border-radius:16px;padding:2rem}
+.login-title{font-size:22px;font-weight:500;text-align:center;margin-bottom:0.25rem}
+.login-sub{font-size:13px;color:#666;text-align:center;margin-bottom:1.5rem}
+.doctor-list{display:flex;flex-direction:column;gap:10px}
+.doctor-pick{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e0e0e0;border-radius:10px;cursor:pointer;background:#fff;width:100%;text-align:left;transition:background 0.12s}
+.doctor-pick:hover{background:#f5f5f7}
+.avatar-sm{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0}
+.pick-name{font-size:14px;font-weight:500;color:#1a1a1a}
+.pick-sub{font-size:12px;color:#666}
+
+/* dashboard */
+.dashboard{display:none}
+.topbar{display:flex;align-items:center;gap:14px;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid #e0e0e0}
+.topbar-avatar{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:500;flex-shrink:0}
+.topbar-name{font-size:16px;font-weight:500}
+.topbar-role{font-size:12px;color:#666;margin-top:2px}
+.logout-btn{margin-left:auto;font-size:12px;padding:7px 14px;border-radius:8px;border:1px solid #d0d0d0;background:#fff;color:#555;cursor:pointer}
+.logout-btn:hover{background:#f5f5f7}
+
+/* section labels */
+.section-label{font-size:11px;font-weight:500;color:#888;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;margin-top:1.5rem}
+
+/* metrics */
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.metric{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:14px}
+.metric-label{font-size:11px;color:#888;margin-bottom:6px}
+.metric-value{font-size:22px;font-weight:500;color:#1a1a1a}
+.metric-value.ok{color:#1a7a4a}
+.metric-value.warn{color:#854F0B}
+.metric-value.danger{color:#A32D2D}
+
+/* history */
+.history-section{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:14px 16px}
+.history-row{display:flex;gap:4px;align-items:flex-end;height:80px;margin-bottom:6px}
+.history-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%}
+.history-bar-area{width:100%;flex:1;display:flex;align-items:flex-end;position:relative}
+.history-bar{width:100%;border-radius:3px 3px 0 0}
+.history-label{font-size:10px;color:#999}
+.history-note{font-size:11px;color:#999;margin-top:4px}
+
+/* charts */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:14px 16px}
+.chart-title{font-size:12px;color:#666;margin-bottom:10px}
+
+/* sim */
+.sim-card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:16px}
+.ctrl-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ctrl-row label{font-size:13px;color:#555;width:190px;flex-shrink:0}
+.ctrl-row strong{font-size:13px;font-weight:500;min-width:36px;text-align:right}
+.ctrl-row input[type=range]{flex:1;accent-color:#378ADD}
+.risk-bar{height:10px;border-radius:5px;background:#eee;overflow:hidden;margin-bottom:6px}
+.risk-fill{height:100%;border-radius:5px;transition:width 0.35s,background 0.35s}
+.risk-labels{display:flex;justify-content:space-between;font-size:11px;color:#888}
+
+/* insight */
+.insight-box{background:#f9f9fb;border:1px solid #e0e0e0;border-radius:10px;padding:14px 16px;font-size:13px;color:#555;line-height:1.7}
+.insight-box strong{color:#1a1a1a;font-weight:500}
+
+/* actions */
+.actions-row{display:flex;gap:10px;flex-wrap:wrap}
+.act-btn{font-size:13px;padding:8px 16px;border-radius:8px;border:1px solid #d0d0d0;background:#fff;color:#1a1a1a;cursor:pointer;transition:background 0.12s}
+.act-btn:hover{background:#f5f5f7}
+
+/* tier pills */
+.tier-pill{display:inline-block;font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px}
+.tier-low{background:#d4edda;color:#1a5c30}
+.tier-mod{background:#fff3cd;color:#7a5200}
+.tier-high{background:#fce4e4;color:#8c1a1a}
+
+/* responsive */
+@media(max-width:600px){
+  .metrics-row{grid-template-columns:1fr 1fr}
+  .charts-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="root">
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <p class="login-title">Decision fatigue monitor</p>
+    <p class="login-sub">Select your profile to view your shift</p>
+    <div class="doctor-list" id="doctorList"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">
+    <div class="topbar-avatar" id="tb-avatar"></div>
+    <div>
+      <div class="topbar-name" id="tb-name"></div>
+      <div class="topbar-role" id="tb-role"></div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Switch doctor</button>
+  </div>
+
+  <p class="section-label">Current shift snapshot</p>
+  <div class="metrics-row">
+    <div class="metric"><div class="metric-label">Fatigue probability</div><div class="metric-value" id="m-prob">—</div></div>
+    <div class="metric"><div class="metric-label">vs. your baseline</div><div class="metric-value" id="m-vs">—</div></div>
+    <div class="metric"><div class="metric-label">Est. error rate/hr</div><div class="metric-value" id="m-err">—</div></div>
+    <div class="metric"><div class="metric-label">Risk tier</div><div class="metric-value" id="m-tier">—</div></div>
+  </div>
+
+  <p class="section-label">Your historical fatigue — last 14 shifts</p>
+  <div class="history-section">
+    <div class="history-row" id="historyBars"></div>
+    <p class="history-note">Each bar = one past shift. Dashed red line = your personal high-risk threshold.</p>
+  </div>
+
+  <p class="section-label">Fatigue patterns</p>
+  <div class="charts-row">
+    <div class="chart-card">
+      <div class="chart-title">Your fatigue by time of day (personal average)</div>
+      <div style="position:relative;height:160px"><canvas id="cTod"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Projected fatigue across shift — your dot shows current position</div>
+      <div style="position:relative;height:160px"><canvas id="cProj"></canvas></div>
+    </div>
+  </div>
+
+  <p class="section-label">Simulate current shift</p>
+  <div class="sim-card">
+    <div class="ctrl-row">
+      <label>Hours into shift</label>
+      <input type="range" min="0.5" max="12" step="0.5" id="sl-hrs" oninput="simulate()">
+      <strong id="v-hrs">4</strong>
+    </div>
+    <div class="ctrl-row">
+      <label>Decisions this hour</label>
+      <input type="range" min="2" max="55" step="1" id="sl-dec" oninput="simulate()">
+      <strong id="v-dec">20</strong>
+    </div>
+    <div class="ctrl-row">
+      <label>Task switches this hour</label>
+      <input type="range" min="0" max="25" step="1" id="sl-sw" oninput="simulate()">
+      <strong id="v-sw">6</strong>
+    </div>
+    <div style="margin-top:4px;margin-bottom:4px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:4px">
+        <span>Fatigue probability</span><span id="v-prob-pct">—</span>
+      </div>
+      <div class="risk-bar"><div class="risk-fill" id="sim-fill"></div></div>
+      <div class="risk-labels"><span>Your personal low</span><span id="lbl-thresh"></span></div>
+    </div>
+  </div>
+
+  <p class="section-label">Insight</p>
+  <div class="insight-box" id="insightBox"></div>
+
+  <p class="section-label">Explore further</p>
+  <div class="actions-row">
+    <button class="act-btn" onclick="askExplain()">Why am I at this risk level?</button>
+    <button class="act-btn" onclick="askIntervention()">What should I do right now?</button>
+    <button class="act-btn" onclick="askPattern()">Long-term scheduling advice</button>
+  </div>
+</div>
+
+</div><!-- /root -->
+
+<script>
+const DOCTORS = [
+  {
+    id:'A', initials:'SR', name:'Dr. Sarah Reyes', role:'Emergency Medicine · 6 yrs',
+    color:'#185FA5', colorBg:'#E6F1FB',
+    baselineMean:0.38, baselineThresh:0.58,
+    peakHour:14, nightSensitive:false,
+    personalDecRate:22, personalSwRate:8,
+    history:[0.31,0.44,0.36,0.61,0.29,0.55,0.40,0.33,0.67,0.28,0.42,0.38,0.51,0.35],
+    todCurve:[0.28,0.26,0.32,0.35,0.30,0.32,0.38,0.40,0.43,0.48,0.51,0.53,0.55,0.57,0.58,0.55,0.50,0.44,0.38,0.34,0.30,0.28,0.27,0.27],
+  },
+  {
+    id:'B', initials:'MK', name:'Dr. Marcus Kim', role:'ICU · 12 yrs',
+    color:'#0F6E56', colorBg:'#E1F5EE',
+    baselineMean:0.44, baselineThresh:0.64,
+    peakHour:3, nightSensitive:true,
+    personalDecRate:34, personalSwRate:14,
+    history:[0.52,0.48,0.70,0.41,0.65,0.55,0.43,0.72,0.38,0.61,0.49,0.68,0.44,0.57],
+    todCurve:[0.65,0.70,0.72,0.68,0.60,0.50,0.44,0.40,0.43,0.47,0.50,0.52,0.54,0.55,0.56,0.54,0.52,0.50,0.55,0.60,0.63,0.65,0.66,0.66],
+  },
+  {
+    id:'C', initials:'PT', name:'Dr. Priya Thandav', role:'Internal Medicine · 3 yrs',
+    color:'#534AB7', colorBg:'#EEEDFE',
+    baselineMean:0.33, baselineThresh:0.52,
+    peakHour:18, nightSensitive:false,
+    personalDecRate:16, personalSwRate:5,
+    history:[0.28,0.35,0.30,0.38,0.25,0.40,0.32,0.44,0.27,0.36,0.29,0.41,0.33,0.37],
+    todCurve:[0.22,0.20,0.22,0.25,0.24,0.25,0.28,0.30,0.34,0.38,0.40,0.42,0.43,0.44,0.45,0.46,0.48,0.50,0.48,0.43,0.36,0.30,0.25,0.23],
+  },
+];
+
+let currentDoc = null;
+let chartTod = null, chartProj = null;
+
+function buildLoginList() {
+  const list = document.getElementById('doctorList');
+  list.innerHTML = '';
+  DOCTORS.forEach(d => {
+    const btn = document.createElement('button');
+    btn.className = 'doctor-pick';
+    const tier = d.baselineMean < 0.4 ? 'Low' : d.baselineMean < 0.6 ? 'Moderate' : 'High';
+    const tierCls = tier === 'Low' ? 'tier-low' : tier === 'Moderate' ? 'tier-mod' : 'tier-high';
+    btn.innerHTML = `
+      <div class="avatar-sm" style="background:${d.colorBg};color:${d.color}">${d.initials}</div>
+      <div style="flex:1">
+        <div class="pick-name">${d.name}</div>
+        <div class="pick-sub">${d.role}</div>
+      </div>
+      <span class="tier-pill ${tierCls}">${tier} baseline</span>
+    `;
+    btn.onclick = () => login(d.id);
+    list.appendChild(btn);
+  });
+}
+
+function login(id) {
+  currentDoc = DOCTORS.find(d => d.id === id);
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  renderDashboard();
+}
+
+function logout() {
+  document.getElementById('loginScreen').style.display = 'block';
+  document.getElementById('dashboard').style.display = 'none';
+  if (chartTod) { chartTod.destroy(); chartTod = null; }
+  if (chartProj) { chartProj.destroy(); chartProj = null; }
+}
+
+function renderDashboard() {
+  const d = currentDoc;
+  document.getElementById('tb-avatar').textContent = d.initials;
+  document.getElementById('tb-avatar').style.background = d.colorBg;
+  document.getElementById('tb-avatar').style.color = d.color;
+  document.getElementById('tb-name').textContent = d.name;
+  document.getElementById('tb-role').textContent = d.role;
+  renderHistory();
+  buildCharts();
+  document.getElementById('sl-hrs').value = 4;
+  document.getElementById('sl-dec').value = d.personalDecRate;
+  document.getElementById('sl-sw').value = d.personalSwRate;
+  document.getElementById('lbl-thresh').textContent = 'High-risk threshold: ' + (d.baselineThresh * 100).toFixed(0) + '%';
+  simulate();
+}
+
+function renderHistory() {
+  const d = currentDoc;
+  const container = document.getElementById('historyBars');
+  container.innerHTML = '';
+  const maxH = 64;
+  d.history.forEach((val, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'history-bar-wrap';
+    const barH = Math.round(val * maxH);
+    const color = val >= d.baselineThresh ? '#E24B4A' : val >= d.baselineMean ? '#EF9F27' : '#1D9E75';
+    const threshPx = Math.round(d.baselineThresh * maxH);
+    wrap.innerHTML = `
+      <div class="history-bar-area">
+        <div style="position:absolute;bottom:${threshPx}px;width:100%;border-top:1.5px dashed #E24B4A;opacity:0.5"></div>
+        <div class="history-bar" style="height:${barH}px;background:${color};width:100%"></div>
+      </div>
+      <div class="history-label">S${i+1}</div>
+    `;
+    container.appendChild(wrap);
+  });
+}
+
+function buildCharts() {
+  const d = currentDoc;
+  if (chartTod) chartTod.destroy();
+  if (chartProj) chartProj.destroy();
+
+  chartTod = new Chart(document.getElementById('cTod').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: Array.from({length:24}, (_,i) => i % 3 === 0 ? i+':00' : ''),
+      datasets: [
+        {
+          data: d.todCurve,
+          borderColor: d.color,
+          backgroundColor: d.colorBg + '88',
+          fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2,
+        },
+        {
+          data: Array(24).fill(d.baselineThresh),
+          borderColor: '#E24B4A', borderDash: [4,3], borderWidth: 1,
+          pointRadius: 0, fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#888' } },
+        y: { min: 0, max: 1, ticks: { font: { size: 10 }, color: '#888', stepSize: 0.25 } }
+      }
+    }
+  });
+
+  const projLabels = Array.from({length:13}, (_,i) => i === 0 ? 'Start' : i+'h');
+  const baseProj = Array.from({length:13}, (_,i) => {
+    const frac = i / 12;
+    return +(d.baselineMean * (0.7 + 0.6 * frac * frac)).toFixed(3);
+  });
+
+  chartProj = new Chart(document.getElementById('cProj').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: projLabels,
+      datasets: [
+        {
+          label: 'Projected', data: baseProj,
+          borderColor: d.color, backgroundColor: d.colorBg + '66',
+          fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2,
+        },
+        {
+          label: 'Threshold', data: Array(13).fill(d.baselineThresh),
+          borderColor: '#E24B4A', borderDash: [4,3], borderWidth: 1,
+          pointRadius: 0, fill: false,
+        },
+        {
+          label: 'You now', data: Array(13).fill(null),
+          borderColor: '#EF9F27', borderWidth: 0,
+          pointRadius: Array(13).fill(0),
+          pointBackgroundColor: '#EF9F27', fill: false,
+        }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#888', maxTicksLimit: 7 } },
+        y: { min: 0, max: 1, ticks: { font: { size: 10 }, color: '#888', stepSize: 0.25 } }
+      }
+    }
+  });
+}
+
+function simulate() {
+  const d = currentDoc;
+  const hrs = +document.getElementById('sl-hrs').value;
+  const dec = +document.getElementById('sl-dec').value;
+  const sw  = +document.getElementById('sl-sw').value;
+
+  document.getElementById('v-hrs').textContent = hrs;
+  document.getElementById('v-dec').textContent = dec;
+  document.getElementById('v-sw').textContent  = sw;
+
+  const todFatigue = d.todCurve[Math.round(d.peakHour) % 24] || d.baselineMean;
+  const decNorm  = Math.min(dec / 55, 1);
+  const swNorm   = Math.min(sw / 25, 1);
+  const timeNorm = Math.min(hrs / 12, 1);
+  const scale    = d.baselineMean / 0.38;
+
+  const rawProb = (todFatigue*0.30 + decNorm*0.25 + swNorm*0.20 + timeNorm*0.25) * scale;
+  const prob    = Math.min(Math.max(rawProb, 0), 1);
+  const vsBaseline = prob - d.baselineMean;
+  const errRate = (0.01 + 0.05 * prob * (1 + decNorm)).toFixed(2);
+  const tier    = prob >= d.baselineThresh ? 'High' : prob >= d.baselineMean ? 'Moderate' : 'Low';
+  const tierCls = tier === 'Low' ? 'ok' : tier === 'Moderate' ? 'warn' : 'danger';
+  const tierPill= tier === 'Low' ? 'tier-low' : tier === 'Moderate' ? 'tier-mod' : 'tier-high';
+  const fillCol = tier === 'Low' ? '#1D9E75' : tier === 'Moderate' ? '#EF9F27' : '#E24B4A';
+
+  document.getElementById('m-prob').textContent = (prob*100).toFixed(0)+'%';
+  document.getElementById('m-prob').className = 'metric-value '+tierCls;
+
+  const sign = vsBaseline >= 0 ? '+' : '';
+  document.getElementById('m-vs').textContent = sign+(vsBaseline*100).toFixed(0)+'%';
+  document.getElementById('m-vs').className = 'metric-value '+(vsBaseline > 0.12 ? 'danger' : vsBaseline > 0.05 ? 'warn' : 'ok');
+
+  document.getElementById('m-err').textContent = errRate;
+  document.getElementById('m-err').className = 'metric-value '+(parseFloat(errRate)>0.10?'danger':parseFloat(errRate)>0.06?'warn':'ok');
+
+  document.getElementById('m-tier').innerHTML = `<span class="tier-pill ${tierPill}">${tier}</span>`;
+  document.getElementById('v-prob-pct').textContent = (prob*100).toFixed(0)+'%';
+  document.getElementById('sim-fill').style.width = (prob*100).toFixed(0)+'%';
+  document.getElementById('sim-fill').style.background = fillCol;
+
+  updateInsight(d, prob, tier, hrs, dec, vsBaseline, errRate);
+  updateProjectionChart(hrs, prob);
+}
+
+function updateInsight(d, prob, tier, hrs, dec, vsBaseline, errRate) {
+  const box = document.getElementById('insightBox');
+  const lastName = d.name.split(' ').slice(-1)[0];
+  if (tier === 'Low') {
+    box.innerHTML = `<strong>Dr. ${lastName} is operating within their personal safe zone.</strong> At ${hrs}h into the shift with ${dec} decisions/hr, fatigue is ${(prob*100).toFixed(0)}% — below your personal threshold of ${(d.baselineThresh*100).toFixed(0)}%. Estimated error rate is ${errRate}/hr, consistent with your baseline performance.`;
+  } else if (tier === 'Moderate') {
+    box.innerHTML = `<strong>Approaching your personal high-risk zone.</strong> ${hrs}h in, fatigue probability is ${(prob*100).toFixed(0)}% — ${Math.abs((vsBaseline*100)).toFixed(0)}% above your typical baseline. Your personal pattern shows this is where decision quality typically begins to slip. Consider a short break or handing off complex cases.`;
+  } else {
+    box.innerHTML = `<strong>Above your personal high-risk threshold (${(d.baselineThresh*100).toFixed(0)}%).</strong> At ${(prob*100).toFixed(0)}% fatigue probability and ${dec} decisions/hr, estimated error rate (${errRate}/hr) is elevated relative to your baseline. Your historical data suggests a break or workload reduction is warranted now.`;
+  }
+}
+
+function updateProjectionChart(hrs, prob) {
+  if (!chartProj) return;
+  const idx = Math.min(Math.round(hrs), 12);
+  const dot = Array(13).fill(null);
+  dot[idx] = +prob.toFixed(3);
+  const radii = Array(13).fill(0);
+  radii[idx] = 6;
+  chartProj.data.datasets[2].data = dot;
+  chartProj.data.datasets[2].pointRadius = radii;
+  chartProj.update('none');
+}
+
+function askExplain() {
+  const d = currentDoc;
+  const hrs  = document.getElementById('sl-hrs').value;
+  const dec  = document.getElementById('sl-dec').value;
+  const prob = document.getElementById('v-prob-pct').textContent;
+  alert(`Prompt to send to your AI backend:\n\nI am ${d.name}, a ${d.role}. My current fatigue probability is ${prob} after ${hrs} hours into my shift, handling ${dec} decisions per hour. My personal baseline is ~${(d.baselineMean*100).toFixed(0)}% and high-risk threshold is ${(d.baselineThresh*100).toFixed(0)}%. Why am I at this risk level and what are the main drivers?`);
+}
+
+function askIntervention() {
+  const d = currentDoc;
+  const tier = document.getElementById('m-tier').textContent.trim();
+  const hrs  = document.getElementById('sl-hrs').value;
+  alert(`Prompt to send to your AI backend:\n\nI am ${d.name} (${d.role}). I am ${hrs} hours into my shift and currently at ${tier} fatigue risk. What concrete actions should I take right now to reduce my error risk?`);
+}
+
+function askPattern() {
+  const d = currentDoc;
+  alert(`Prompt to send to your AI backend:\n\nBased on ${d.name}'s historical fatigue profile — a ${d.role} with a personal high-risk threshold of ${(d.baselineThresh*100).toFixed(0)}% — what long-term scheduling or workflow changes would reduce their chronic fatigue risk?`);
+}
+
+buildLoginList();
+</script>
+</body>
+</html>
